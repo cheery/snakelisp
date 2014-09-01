@@ -4,7 +4,7 @@ The snakelisp is a lisp dialect by Henri Tuhola. It is a study language to explo
 
 Code sample:
 
- ![Factorial in lisp-editor](factorial.png)
+ ![Factorial in lisp-editor](examples/factorial.png)
 
 Binary list processing uses "binary lists" instead of plain text files to store source code and data. The lists are read and modified with structure editors, such as [lisp-editor](https://www.youtube.com/watch?v=-AZbteER_Ho).
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from blip import ListNode, TextNode, MarkNode, isList, isText, isMark
 import json
 import transpiler
 from cps import Call, Lambda, Assign, Variable, Constant, Environ, null, true, false
@@ -229,47 +230,6 @@ def decodeJson(node):
         return MarkNode(node["label"])
     else:
         raise Exception("unknown {}".format(node))
-
-class ListNode(object):
-    def __init__(self, nodes, label):
-        self.nodes = list(nodes)
-        self.label = label
-
-    def __getitem__(self, index):
-        return self.nodes[index]
-
-    def __len__(self):
-        return len(self.nodes)
-
-    def strip(self):
-        return ListNode([a for a in self if not isMark(a, 'cr')], self.label)
-
-    def __repr__(self):
-        return "List:{}/{}".format(self.label, len(self))
-
-class TextNode(object):
-    def __init__(self, text, label):
-        self.text = text
-        self.label = label
-
-    def __repr__(self):
-        return "Text:{}:{!r}".format(self.label, self.text)
-
-class MarkNode(object):
-    def __init__(self, label):
-        self.label = label
-
-    def __repr__(self):
-        return "Mark:{}".format(self.label)
-
-def isList(node, label=None):
-    return isinstance(node, ListNode) and (label is None or node.label == label)
-
-def isText(node, label=None):
-    return isinstance(node, TextNode) and (label is None or node.label == label)
-
-def isMark(node, label=None):
-    return isinstance(node, MarkNode) and (label is None or node.label == label)
 
 if __name__ == '__main__':
     main()

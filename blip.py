@@ -48,7 +48,7 @@ def write_integer(fd, value):
 
 class ListNode(object):
     _BLIP_TYPE = 0
-    def __init__(self, nodes, label, uid=None):
+    def __init__(self, nodes, label='', uid=''):
         self.nodes = list(nodes)
         self.label = label
 
@@ -76,7 +76,7 @@ class ListNode(object):
 
 class TextNode(object):
     _BLIP_TYPE = 1
-    def __init__(self, text, label, uid=None):
+    def __init__(self, text, label='', uid=''):
         self.text = text
         self.label = label
 
@@ -95,7 +95,7 @@ class TextNode(object):
 
 class DataNode(object):
     _BLIP_TYPE = 2
-    def __init__(self, data, label, uid=None):
+    def __init__(self, data, label='', uid=''):
         self.data = data
         self.label = label
 
@@ -113,7 +113,7 @@ class DataNode(object):
 
 class MarkNode(object):
     _BLIP_TYPE = 3
-    def __init__(self, label, uid=None):
+    def __init__(self, label='', uid=''):
         self.label = label
 
     def __repr__(self):

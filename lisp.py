@@ -119,12 +119,12 @@ def compile(expr, env, k):
         env = env.new_environ()
         ret = env.new_argument('cont', False)
         for sym in expr[0]:
-            assert sym.label == None
+            assert sym.label == ''
             env.new_argument(sym.text)
         return retrieve(k, env.close(compile_list(expr[1:], env, ret)))
     if isList(expr, 'infix') and len(expr) == 3:
-        return compile(ListNode([expr[1], expr[0], expr[2]], None), env, k)
-    if isList(expr, None) and expr.label == None:
+        return compile(ListNode([expr[1], expr[0], expr[2]]), env, k)
+    if isList(expr, ''):
         params = []
         seq = list(expr)
         def next_parameter(param):
@@ -141,7 +141,7 @@ def compile(expr, env, k):
     #    return retrieve(k, Constant(expr.value))
     if isText(expr, "string"):
         return retrieve(k, Constant(expr.text))
-    if isText(expr, None) and expr.label == None:
+    if isText(expr, ''):
         if expr.text[:1].isdigit():
             return retrieve(k, Constant(int(expr.text)))
         if expr.text in constants:
@@ -223,11 +223,11 @@ def open_list(path):
 
 def decodeJson(node):
     if node["type"] == "list":
-        return ListNode([decodeJson(a) for a in node["list"]], node["label"]).strip()
+        return ListNode([decodeJson(a) for a in node["list"]], node["label"] or '').strip()
     elif node["type"] == 'text':
-        return TextNode(node["text"], node["label"])
+        return TextNode(node["text"], node["label"] or '')
     elif node["type"] == 'mark':
-        return MarkNode(node["label"])
+        return MarkNode(node["label"] or '')
     else:
         raise Exception("unknown {}".format(node))
 

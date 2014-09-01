@@ -1,0 +1,4 @@
+*.json.c
+a.out
+*.pyc
+.*.swp

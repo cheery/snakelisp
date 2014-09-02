@@ -635,6 +635,10 @@ value_t error_quit;
 
 uint8_t* gc_high;
 uint8_t* gc_watermark;
+static jmp_buf gc_flush;
+static closure_t* gc_closure;
+static int gc_argc;
+static value_t *gc_argv;
 
 static inline size_t stackSize()
 {
@@ -668,9 +672,17 @@ static CONTINUATION(errorQuit)
     exit(1);
 }
 
+void initGC();
 void snakeBoot(value_t entry)
 {
     adjustWaterMark(frameAddress());
+    initGC();
+
+    if (setjmp(gc_flush))
+    {
+        gc_closure->proc(gc_closure, gc_argc, gc_argv);
+        return;
+    }
 
     uncallable_hook = boxNull();
     type_error_hook = boxNull();
@@ -745,7 +757,183 @@ void snakeBoot(value_t entry)
     call(entry, spawnClosure(quit));
 }
 
+static size_t fr_spacez = 0;
+static size_t to_spacez = 0;
+static char* fr_space = NULL;
+static char* to_space = NULL;
+static char* to_next = NULL;
+void initGC()
+{
+}
+
+static void flipGC()
+{
+    char* tmp;
+    size_t tmpz;
+
+    tmpz = fr_spacez;
+    tmp  = fr_space;
+    fr_space  = to_space;
+    fr_spacez = to_spacez;
+    to_space = tmp;
+    to_spacez = tmpz;
+}
+
+static void* shiftMem(size_t size)
+{
+    assert(size > 0);
+    void* address = to_next;
+    to_next += size;
+    return address;
+}
+
+static void* copyObject(void* address, uint8_t type)
+{
+    object_t *obj = address;
+    if(obj->to)
+    {
+        return obj->to;
+    } else
+    {
+        obj->to = (void*)(long)type;
+        obj->to = memcpy(shiftMem(obj->size), address, obj->size);
+    }
+}
+
+static inline value_t updatePointer(value_t value)
+{
+    if (isNull(value)) return value;
+    if (value.type == TYPE_BOOLEAN
+            || value.type == TYPE_INTEGER
+            || value.type == TYPE_DOUBLE) return value;
+    value.a.address = copyObject(value.a.address, value.type);
+    return value;
+}
+
+static inline value_t* updateSlot(value_t *value)
+{
+    struct slot *slot;
+    if (value->type == TYPE_SLOTCOPY) return value->a.address;
+    *value = updatePointer(*value);
+    
+    slot = shiftMem(sizeof(struct slot));
+    slot->object.to = (void*)TYPE_SLOTCOPY;
+    slot->object.size = sizeof(struct slot);
+    slot->slot = *value;
+
+    value->type = TYPE_SLOTCOPY;
+    value->a.address = &slot->slot;
+    return value->a.address;
+}
+
+#define ROOT(x) (x = updatePointer(x))
+
 void snakeGC(closure_t *closure, size_t argc, value_t *argv)
 {
-    assert(false);
+    char* next;
+    object_t *obj;
+    closure_t *cl;
+    array_t   *arr;
+    uint8_t type;
+    int i;
+
+    flipGC();
+    to_spacez = (gc_high - gc_watermark) + fr_spacez;
+    to_space  = realloc(to_space, to_spacez);
+    to_next   = to_space;
+    next      = to_space;
+    closure = copyObject(closure, TYPE_CLOSURE);
+    for(i = 0; i < argc; i++) argv[i] = updatePointer(argv[i]);
+
+    // make this bit more maintainable later...
+    ROOT(v_get_interface);
+    ROOT(v_set_interface);
+    ROOT(v_closure_interface);
+    ROOT(v_numeric_interface);
+    ROOT(v_string_interface);
+    ROOT(v_arraybuffer_interface);
+    ROOT(v_call_cc);
+    ROOT(v_pick);
+    ROOT(v_array);
+    ROOT(v_arraybuffer);
+    ROOT(v_file_read);
+    ROOT(v_file_write);
+    ROOT(v_file_open);
+    ROOT(v_file_close);
+    ROOT(v_stdin);
+    ROOT(v_stdout);
+    ROOT(v_stderr);
+    ROOT(v_cat);
+    ROOT(v_length);
+    ROOT(v_load_idx);
+    ROOT(v_store_idx);
+    ROOT(v_is_closure);
+    ROOT(v_is_null);
+    ROOT(v_is_true);
+    ROOT(v_is_false);
+    ROOT(v_is_boolean);
+    ROOT(v_is_integer);
+    ROOT(v_is_double);
+    ROOT(v_is_array);
+    ROOT(v_is_arraybuffer);
+    ROOT(v_is_string);
+    ROOT(v_eq); ROOT(v_ne);
+    ROOT(v_lt); ROOT(v_le);
+    ROOT(v_gt); ROOT(v_ge);
+    ROOT(v_add);
+    ROOT(v_sub);
+    ROOT(v_mul);
+    ROOT(v_div);
+    ROOT(v_floordiv);
+    ROOT(v_modulus);
+    ROOT(v_to_character);
+    ROOT(v_to_ordinal);
+    ROOT(v_and);
+    ROOT(v_or);
+    ROOT(v_not);
+    ROOT(v_lsh);
+    ROOT(v_rsh);
+    ROOT(v_bit_or);
+    ROOT(v_bit_and);
+    ROOT(v_bit_xor);
+    ROOT(v_bit_not);
+    ROOT(v_log);
+    ROOT(v_exp);
+    ROOT(v_pow);
+    ROOT(v_sqrt);
+    ROOT(uncallable_hook);
+    ROOT(type_error_hook);
+    ROOT(error_quit);
+
+    while(next < to_next)
+    {
+        obj = (object_t*)next;
+        next += obj->size;
+        type = (long)obj->to;
+        obj->to = NULL;
+        switch (type)
+        {
+            case TYPE_ARRAY:
+                arr = (array_t*)obj;
+                for (i = 0; i < arr->length; i++) arr->val[i] = updatePointer(arr->val[i]);
+                break;
+            case TYPE_CLOSURE:
+                assert(obj->size > 0);
+                cl = (closure_t*)obj;
+                for (i = 0; i < cl->length; i++) cl->slot[i] = updateSlot(cl->slot[i]);
+                break;
+            case TYPE_SLOTCOPY:
+            case TYPE_ARRAYBUFFER:
+            case TYPE_STRING:
+                break;
+            default:
+                printf("missing gc handler\n");
+                assert(false);
+        }
+    }
+
+    gc_closure = closure;
+    gc_argc = argc;
+    gc_argv = memcpy(shiftMem(sizeof(value_t)*argc), argv, sizeof(value_t)*argc);
+    longjmp(gc_flush, 1);
 }

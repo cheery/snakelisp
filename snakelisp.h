@@ -71,9 +71,12 @@ struct value
 #define TYPE_STRING      4
 #define TYPE_ARRAYBUFFER 5
 #define TYPE_ARRAY       7
+#define TYPE_SLOTCOPY    8
 
 struct object
 {
+    void* to;
+    size_t size;
 };
 
 struct array
@@ -105,6 +108,12 @@ struct string
     size_t      byteLength;
     size_t      length;
     uint8_t     data[];
+};
+
+struct slot
+{
+    object_t    object;
+    value_t     slot;
 };
 
 static inline value_t boxNull()
@@ -237,6 +246,14 @@ static inline long coercesToDouble(value_t value)
     return value.type == TYPE_DOUBLE || value.type == TYPE_INTEGER || value.type == TYPE_BOOLEAN;
 }
 
+static inline void *initObject(void* address, size_t size)
+{
+    object_t *object = address;
+    object->to = NULL;
+    object->size = size;
+    return address;
+}
+
 static inline array_t *initArray(array_t *array, size_t length)
 {
     size_t i;
@@ -319,7 +336,10 @@ static inline string_t* unboxString(value_t value)
 /*
  * invariant: continuations never return
  */
-#define allocav(x, y, n)    (alloca(sizeof(x) + sizeof(y)*(n)))
+#define allocav(x, y, n)    ({ \
+        size_t size = sizeof(x) + sizeof(y)*(n); \
+        initObject(alloca(size), size); \
+        })
 #define newArray(n)         (initArray(allocav(array_t, value_t, n), n))
 #define newArrayBuffer(n)   (initArrayBuffer(allocav(arraybuffer_t, uint8_t, n), n))
 #define newCString(x)       (initString(allocav(string_t, char, strlen(x)+1), strlen(x), x))

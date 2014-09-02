@@ -20,7 +20,7 @@ None of the text based tools work with binary lists. They need their own tools, 
 
 ## Danger on file format wars
 
-On plain text files we've got utf-8, utf-16, ascii. Also we've got different carriage flag encodings: `0A`, `0A0D`, etc.
+On plain text files we've got utf-8, utf-16, ascii. Also we've got different line feed encodings: `0A`, `0D0A`, etc.
 
 It is inevitable that on projects such as this, we might end up having several formats for "binary lists". Any such fragmentation on file formats would be a hindrance.
 

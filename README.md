@@ -28,6 +28,8 @@ To alleviate the problem, I store the data structures in `.json` -format. Aside 
 
 I've already considered `.bson`, but there are javascript-specific data types and labels included in the specification. These properties and bloat does not belong to homoiconic file format, it makes `.bson` unfit for generic purpose structured data.
 
+The `.blip` specification is work in progress. There's early alpha reference implementation in the `blip.py` for python.
+
 ## Syntax
 
 The language is using a variation of the list notation, common for lisp family of the languages. The B-expression may be a list, symbol, marker or a binary blob. Every B-expression may hold a label or an uid -string.

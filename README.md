@@ -8,9 +8,25 @@ Code sample:
 
 Binary list processing uses "binary lists" instead of plain text files to store source code and data. The lists are read and modified with structure editors, such as [lisp-editor](https://www.youtube.com/watch?v=-AZbteER_Ho).
 
-The author expects such environment to be more powerful than lisp, and more readable than python. Without readability issues, list processing environments are easier to understand and work with and provide better understanding about the programs written in them, with faster development cycles.
+Goal of this project is to produce a professional programming tool. If you're looking for an educational tool you can use right now, you could look for projects such as [scratch](http://scratch.mit.edu/) or [blockly](https://blockly-demo.appspot.com/static/apps/index.html) instead.
 
-The downside is that nearly every text based tool ceases functioning with binary lists.
+## Motivation
+
+Every source code listing is parsed into AST before they are interpreted. This justifies studies about direct manipulation and storage of those structures.
+
+The author expects such environment to be more powerful than lisp, and more readable than python. Without readability issues, list processing environments are easier to understand and work with, provide better understanding about the programs written in them. It may make it faster to develop new programs. This project provides information about whether he is correct, or incorrect.
+
+None of the text based tools work with binary lists. They need their own tools, that would have to be designed. This is a deterrent to adoption, but not a flaw. Binary lists require their own tools for manipulation.
+
+## Danger on file format wars
+
+On plain text files we've got utf-8, utf-16, ascii. Also we've got different carriage flag encodings: `0A`, `0A0D`, etc.
+
+It is inevitable that on projects such as this, we might end up having several formats for "binary lists". Any such fragmentation on file formats would be a hindrance.
+
+To alleviate the problem, I store the data structures in `.json` -format. Aside that I have binary stream format named `.blip`, which is using utf-8 encoding on strings. I'm willing to consider for alternative formats and improvements into the specification.
+
+I've already considered `.bson`, but there are javascript-specific data types and labels included in the specification. These properties and bloat does not belong to homoiconic file format, it makes `.bson` unfit for generic purpose structured data.
 
 ## Syntax
 

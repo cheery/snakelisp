@@ -64,6 +64,22 @@ Strings are symbols that have `string` -label. No escape character notation is r
 
 The snakelisp is lexically scoped. Every function defines a boundary. Inside the boundary one is free to bind new values with `let` -list. Variables in higher scope can be set with `set` -labelled list.
 
+## Functions
+
+Functions are formed with `func` -label. The first expression inside the label must be an argument list. Remaining expressions are interpreted as the body of the function. If there's no specific label, they are function calls.
+
+When a function is called, the arguments are passed by value and bound to the scope using the argument list. Along the arguments a continuation is passed along, which represents remaining computation. The control flow returns to the continuation when evaluator finishes evaluating body of the function.
+
+## Infix
+
+Lists labeled with `infix` have their second element swapped with the first element. They are otherwise interpreted as calls.
+
+## Control flow constructs
+
+Lists labeled `cond` are conditional constructs. It is an array of lists. Each list has a condition in the head. If the condition evaluates true, the remaining of the list is evaluated. Only one list is evaluated completely. The last element may be `else` -labeled, meaning it will be evaluated if earlier conditions do not evaluate `cond`.
+
+Lists labeled `while` contain condition in the head. If that condition evaluates true, the remaining of the list is evaluated, then `while` tries to evaluate again.
+
 ## Continuation passing as evaluation strategy
 
 The snakelisp is compiling itself into continuation passing style as the intermediary form. The current compilation strategy follows the Cheney on the M.T.A. -paper. It is not suitable for interactive evaluation, so it will be supplied with an interpreter later on.

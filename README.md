@@ -30,6 +30,8 @@ I've already considered `.bson`, but there are javascript-specific data types an
 
 The `.blip` specification is work in progress. There's early alpha reference implementation in the `blip.py` for python.
 
+Obligatory XKCD reference: how do you solve issues with existing and competing fileformats that partially overlap and generally do a poor job? Why you create a new file format, of course.
+
 ## Syntax
 
 The language is using a variation of the list notation, common for lisp family of the languages. The B-expression may be a list, symbol, marker or a binary blob. Every B-expression may hold a label or an uid -string.

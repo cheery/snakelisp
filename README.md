@@ -24,9 +24,11 @@ On plain text files we've got utf-8, utf-16, ascii. Also we've got different car
 
 It is inevitable that on projects such as this, we might end up having several formats for "binary lists". Any such fragmentation on file formats would be a hindrance.
 
-To alleviate the problem, I store the data structures in `.json` -format. Aside that I have binary stream format named `.blip`, which is using utf-8 encoding on strings. I'm willing to consider for alternative formats and improvements into the specification.
+To alleviate the problem, I store the data structures in `.json` -format. Aside that I have binary stream format named `.blip`, which is using utf-8 encoding on strings. This format is unreadable and cannot be modified without an editor. I'm willing to consider for alternative formats and improvements into the specification, but keep in mind this format doesn't restrict transfer over plain text. There are various encodings for doing that. One just needs to choose one.
 
 I've already considered `.bson`, but there are javascript-specific data types and labels included in the specification. These properties and bloat does not belong to homoiconic file format, it makes `.bson` unfit for generic purpose structured data.
+
+There are other interesting data transfer formats such as [s-expressions](http://people.csail.mit.edu/rivest/sexp.html) and [bernstein netstrings](http://tools.ietf.org/html/draft-bernstein-netstrings-02). Variation of these might be more convenient than the `.blip` -format. Keep in mind though, that some text based tools would be still unusable. Incorrect parse needs to be corrected before it can be edited in a structure editor.
 
 The `.blip` specification is work in progress. There's early alpha reference implementation in the `blip.py` for python.
 

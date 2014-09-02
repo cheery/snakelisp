@@ -30,6 +30,8 @@ I've already considered `.bson`, but there are javascript-specific data types an
 
 There are other interesting data transfer formats such as [s-expressions](http://people.csail.mit.edu/rivest/sexp.html) and [bernstein netstrings](http://tools.ietf.org/html/draft-bernstein-netstrings-02). Variation of these might be more convenient than the `.blip` -format. Keep in mind though, that some text based tools would be still unusable. Incorrect parse needs to be corrected before it can be edited in a structure editor.
 
+The editor could also use something like scheme or clojure directly as it's file format. Though it might be better to produce canonicalized lisp for this purpose anyway. Many languages have their own incompatible variations to s-expressions to improve plain text readability.
+
 The `.blip` specification is work in progress. There's early alpha reference implementation in the `blip.py` for python.
 
 Obligatory XKCD reference: how do you solve issues with existing and competing fileformats that partially overlap and generally do a poor job? Why you create a new file format, of course.

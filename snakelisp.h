@@ -365,6 +365,10 @@ static inline string_t* unboxString(value_t value)
  */
 #include <assert.h>
 
+#define MAX_ROOTS 1024
+extern size_t  rootz;
+extern value_t root[MAX_ROOTS];
+
 extern value_t uncallable_hook;
 extern value_t type_error_hook;
 extern value_t error_quit;

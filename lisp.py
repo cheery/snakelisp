@@ -5,6 +5,7 @@ import transpiler
 from cps import Call, Lambda, Assign, Variable, Constant, Environ, null, true, false
 import subprocess
 import sys
+import re
 
 # call = Call([arguments]), call[i]
 # lambda = Lambda([arguments], body), lambda[i]
@@ -25,70 +26,22 @@ def main():
     program = env.close(compile_list(exprs, env, ret))
     program = program.coalesce()
 
+    snakesource = "snakelisp.c"
+
+    rootdecl = re.compile(r'newRoot\("(.+)",')
+    with open(snakesource) as fd:
+        src = fd.read()
+        c_roots = dict((decl, "(root+{})".format(i)) for i, decl in enumerate(rootdecl.findall(src)))
+
     c_api = {
-        "call/cc":     "&v_call_cc",
-        "pick":        "&v_pick",
-        "array":       "&v_array",
-        "arraybuffer": "&v_arraybuffer",
-        "file-open":   "&v_file_open",
-        "file-close":  "&v_file_close",
-        "file-read":   "&v_file_read",
-        "file-write":  "&v_file_write",
-        "stdin":       "&v_stdin",
-        "stdout":      "&v_stdout",
-        "stderr":      "&v_stderr",
-        "cat":         "&v_cat",
-        "length":      "&v_length",
-        "idx":         "&v_load_idx",
-        "idx=":        "&v_store_idx",
-        "closure?":    "&v_is_closure",
-        "null?":       "&v_is_null",
-        "true?":       "&v_is_true",
-        "false?":      "&v_is_false",
-        "boolean?":    "&v_is_boolean",
-        "integer?":    "&v_is_integer",
-        "double?":     "&v_is_double",
-        "array?":      "&v_is_array",
-        "arraybuffer?":"&v_is_arraybuffer",
-        "string?":     "&v_is_string",
-        "<":          "&v_lt",
-        ">":          "&v_gt",
-        "<=":          "&v_le",
-        ">=":          "&v_ge",
-        "=":          "&v_eq",
-        "!=":          "&v_ne",
-        "+":           "&v_add",
-        "-":           "&v_sub",
-        "*":           "&v_mul",
-        "/":           "&v_div",
-        "//":          "&v_floordiv",
-        "%":           "&v_modulus",
-        "chr":         "&v_to_character",
-        "ord":         "&v_to_ordinal",
-        "and":         "&v_and",
-        "or":          "&v_or",
-        "not":         "&v_not",
-        "<<":          "&v_lsh",
-        ">>":          "&v_rsh",
-        "|":           "&v_bit_or",
-        "&":           "&v_bit_and",
-        "^":           "&v_bit_xor",
-        "~":           "&v_bit_not",
-        "log":         "&v_log",
-        "exp":         "&v_exp",
-        "pow":         "&v_pow",
-        "sqrt":        "&v_sqrt",
         "uncallable-hook": "&uncallable_hook",
         "type-error-hook": "&type_error_hook",
-        "interface":   "&v_get_interface",
-        "interface=":  "&v_set_interface",
-        "closure-interface": "&v_closure_interface",
-        "numeric-interface": "&v_numeric_interface",
-        "string-interface": "&v_string_interface",
-        "arraybuffer-interface": "&v_arraybuffer_interface",
     }
     c_use = set()
     for var in env.seal():
+        if var.name in c_roots:
+            var.c_handle = c_roots[var.name]
+            continue
         var.c_handle = c_api[var.name]
         c_use.add(var.c_handle)
     cdefns = ["extern value_t {};".format(value[1:]) for value in c_use]
@@ -98,7 +51,7 @@ def main():
 
     source = transpiler.transpile(program, cdefns, path)
     open(path+'.c', 'w').write(source)
-    subprocess.call(["gcc", path+'.c', "snakelisp.c", "-I.", "-lm"])
+    subprocess.call(["gcc", path+'.c', snakesource, "-I.", "-lm"])
 
 constants = {'null': null, 'true':true, 'false':false}
 

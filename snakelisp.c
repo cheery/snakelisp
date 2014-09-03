@@ -534,12 +534,12 @@ static CONTINUATION(op_sqrt)
 }
 
 value_t
-    v_get_interface,
-    v_set_interface,
-    v_closure_interface,
-    v_numeric_interface,
-    v_string_interface,
-    v_arraybuffer_interface;
+    *p_get_interface,
+    *p_set_interface,
+    *p_closure_interface,
+    *p_numeric_interface,
+    *p_string_interface,
+    *p_arraybuffer_interface;
 
 static CONTINUATION(get_interface)
 {
@@ -548,18 +548,18 @@ static CONTINUATION(get_interface)
     switch (value.type)
     {
         case TYPE_CLOSURE:
-            interface = v_closure_interface;
+            interface = *p_closure_interface;
             break;
         case TYPE_BOOLEAN:
         case TYPE_INTEGER:
         case TYPE_DOUBLE:
-            interface = v_numeric_interface;
+            interface = *p_numeric_interface;
             break;
         case TYPE_STRING:
-            interface = v_string_interface;
+            interface = *p_string_interface;
             break;
         case TYPE_ARRAYBUFFER:
-            interface = v_arraybuffer_interface;
+            interface = *p_arraybuffer_interface;
             break;
         case TYPE_ARRAY:
             interface = ARG_ARRAY(2)->interface;
@@ -577,57 +577,16 @@ static CONTINUATION(set_interface)
     call(ARG(1), ARG(2));
 }
 
+size_t rootz = 0;
+value_t root[MAX_ROOTS];
 
-value_t
-    v_call_cc,
-    v_pick,
-    v_array,
-    v_arraybuffer,
-    v_file_read,
-    v_file_write,
-    v_file_open,
-    v_file_close,
-    v_stdin,
-    v_stdout,
-    v_stderr,
-    v_cat,
-    v_length,
-    v_load_idx,
-    v_store_idx,
-    v_is_closure,
-    v_is_null,
-    v_is_true,
-    v_is_false,
-    v_is_boolean,
-    v_is_integer,
-    v_is_double,
-    v_is_array,
-    v_is_arraybuffer,
-    v_is_string,
-    v_eq, v_ne,
-    v_lt, v_le,
-    v_gt, v_ge,
-    v_add,
-    v_sub,
-    v_mul,
-    v_div,
-    v_floordiv,
-    v_modulus,
-    v_to_character,
-    v_to_ordinal,
-    v_and,
-    v_or,
-    v_not,
-    v_lsh,
-    v_rsh,
-    v_bit_or,
-    v_bit_and,
-    v_bit_xor,
-    v_bit_not,
-    v_log,
-    v_exp,
-    v_pow,
-    v_sqrt;
+static inline value_t* newRoot(const char *name, value_t value)
+{
+    value_t* ptr = &root[rootz];
+    root[rootz++] = value;
+    assert(rootz < MAX_ROOTS);
+    return ptr;
+}
 
 value_t uncallable_hook;
 value_t type_error_hook;
@@ -687,71 +646,67 @@ void snakeBoot(value_t entry)
     uncallable_hook = boxNull();
     type_error_hook = boxNull();
 
-    v_call_cc = spawnClosure(call_cc);
-    v_pick = spawnClosure(pick);
-    v_array       = spawnClosure(new_array);
-    v_arraybuffer = spawnClosure(new_arraybuffer);
+    newRoot("stdin",  boxInteger(0));
+    newRoot("stdout", boxInteger(1));
+    newRoot("stderr", boxInteger(2));
+    newRoot("file-open", spawnClosure(file_open));
+    newRoot("file-read", spawnClosure(file_read));
+    newRoot("file-write", spawnClosure(file_write));
+    newRoot("file-close", spawnClosure(file_close));
+    newRoot("call/cc", spawnClosure(call_cc));
+    newRoot("pick", spawnClosure(pick));
+    newRoot("array", spawnClosure(new_array));
+    newRoot("arraybuffer", spawnClosure(new_arraybuffer));
 
-    v_file_read  = spawnClosure(file_read);
-    v_file_write = spawnClosure(file_write);
-    v_file_open  = spawnClosure(file_open);
-    v_file_close = spawnClosure(file_close);
-    v_stdin  = boxInteger(0);
-    v_stdout = boxInteger(1);
-    v_stderr = boxInteger(2);
+    newRoot("cat", spawnClosure(catenate));
+    newRoot("length", spawnClosure(length_of));
+    newRoot("idx", spawnClosure(load_idx));
+    newRoot("idx=", spawnClosure(store_idx));
 
-    v_cat       = spawnClosure(catenate);
-    v_length    = spawnClosure(length_of);
-    v_load_idx  = spawnClosure(load_idx);
-    v_store_idx = spawnClosure(store_idx);
+    newRoot("closure?", spawnClosure(is_closure));
+    newRoot("null?", spawnClosure(is_null));
+    newRoot("true?", spawnClosure(is_true));
+    newRoot("false?", spawnClosure(is_false));
+    newRoot("boolean?", spawnClosure(is_boolean));
+    newRoot("integer?", spawnClosure(is_integer));
+    newRoot("double?", spawnClosure(is_double));
+    newRoot("array?", spawnClosure(is_array));
+    newRoot("arraybuffer?", spawnClosure(is_arraybuffer));
+    newRoot("string?", spawnClosure(is_string));
+    newRoot("=", spawnClosure(op_eq));
+    newRoot("!=", spawnClosure(op_ne));
+    newRoot("<", spawnClosure(op_lt));
+    newRoot("<=", spawnClosure(op_le));
+    newRoot(">", spawnClosure(op_gt));
+    newRoot(">=", spawnClosure(op_ge));
+    newRoot("+", spawnClosure(op_add));
+    newRoot("-", spawnClosure(op_sub));
+    newRoot("*", spawnClosure(op_mul));
+    newRoot("/", spawnClosure(op_div));
+    newRoot("//", spawnClosure(op_floordiv));
+    newRoot("%", spawnClosure(op_modulus));
+    newRoot("chr", spawnClosure(to_character));
+    newRoot("ord", spawnClosure(to_ordinal));
+    newRoot("and", spawnClosure(op_and));
+    newRoot("or", spawnClosure(op_or));
+    newRoot("not", spawnClosure(op_not));
+    newRoot("<<", spawnClosure(op_lsh));
+    newRoot(">>", spawnClosure(op_rsh));
+    newRoot("|", spawnClosure(op_bit_or));
+    newRoot("&", spawnClosure(op_bit_and));
+    newRoot("^", spawnClosure(op_bit_xor));
+    newRoot("~", spawnClosure(op_bit_not));
+    newRoot("log", spawnClosure(op_log));
+    newRoot("exp", spawnClosure(op_exp));
+    newRoot("pow", spawnClosure(op_pow));
+    newRoot("sqrt", spawnClosure(op_sqrt));
 
-    v_is_closure = spawnClosure(is_closure);
-    v_is_null = spawnClosure(is_null);
-    v_is_true = spawnClosure(is_true);
-    v_is_false = spawnClosure(is_false);
-    v_is_boolean = spawnClosure(is_boolean);
-    v_is_integer = spawnClosure(is_integer);
-    v_is_double = spawnClosure(is_double);
-    v_is_array = spawnClosure(is_array);
-    v_is_arraybuffer = spawnClosure(is_arraybuffer);
-    v_is_string = spawnClosure(is_string);
-
-    v_eq = spawnClosure(op_eq);
-    v_ne = spawnClosure(op_ne);
-    v_lt = spawnClosure(op_lt);
-    v_le = spawnClosure(op_le);
-    v_gt = spawnClosure(op_gt);
-    v_ge = spawnClosure(op_ge);
-
-    v_add = spawnClosure(op_add);
-    v_sub = spawnClosure(op_sub);
-    v_mul = spawnClosure(op_mul);
-    v_div = spawnClosure(op_div);
-    v_floordiv = spawnClosure(op_floordiv);
-    v_modulus  = spawnClosure(op_modulus);
-    v_to_character = spawnClosure(to_character);
-    v_to_ordinal   = spawnClosure(to_ordinal);
-    v_and = spawnClosure(op_and);
-    v_or  = spawnClosure(op_or);
-    v_not = spawnClosure(op_not);
-
-    v_lsh = spawnClosure(op_lsh);
-    v_rsh = spawnClosure(op_rsh);
-    v_bit_or = spawnClosure(op_bit_or);
-    v_bit_and = spawnClosure(op_bit_and);
-    v_bit_xor = spawnClosure(op_bit_xor);
-    v_bit_not = spawnClosure(op_bit_not);
-    v_log = spawnClosure(op_log);
-    v_exp = spawnClosure(op_exp);
-    v_pow = spawnClosure(op_pow);
-    v_sqrt = spawnClosure(op_sqrt);
-
-    v_get_interface = spawnClosure(get_interface);
-    v_set_interface = spawnClosure(set_interface);
-    v_closure_interface = boxNull();
-    v_numeric_interface = boxNull();
-    v_string_interface = boxNull();
-    v_arraybuffer_interface = boxNull();
+    p_get_interface = newRoot("interface", spawnClosure(get_interface));
+    p_set_interface = newRoot("interface=", spawnClosure(set_interface));
+    p_closure_interface = newRoot("closure-interface", boxNull());
+    p_numeric_interface = newRoot("numeric-interface", boxNull());
+    p_string_interface = newRoot("string-interface", boxNull());
+    p_arraybuffer_interface = newRoot("arraybuffer-interface", boxNull());
 
     error_quit = spawnClosure(errorQuit);
     call(entry, spawnClosure(quit));
@@ -845,62 +800,8 @@ void snakeGC(closure_t *closure, size_t argc, value_t *argv)
     closure = copyObject(closure, TYPE_CLOSURE);
     for(i = 0; i < argc; i++) argv[i] = updatePointer(argv[i]);
 
+    for(i = 0; i < rootz; i++) root[i] = updatePointer(root[i]);
     // make this bit more maintainable later...
-    ROOT(v_get_interface);
-    ROOT(v_set_interface);
-    ROOT(v_closure_interface);
-    ROOT(v_numeric_interface);
-    ROOT(v_string_interface);
-    ROOT(v_arraybuffer_interface);
-    ROOT(v_call_cc);
-    ROOT(v_pick);
-    ROOT(v_array);
-    ROOT(v_arraybuffer);
-    ROOT(v_file_read);
-    ROOT(v_file_write);
-    ROOT(v_file_open);
-    ROOT(v_file_close);
-    ROOT(v_stdin);
-    ROOT(v_stdout);
-    ROOT(v_stderr);
-    ROOT(v_cat);
-    ROOT(v_length);
-    ROOT(v_load_idx);
-    ROOT(v_store_idx);
-    ROOT(v_is_closure);
-    ROOT(v_is_null);
-    ROOT(v_is_true);
-    ROOT(v_is_false);
-    ROOT(v_is_boolean);
-    ROOT(v_is_integer);
-    ROOT(v_is_double);
-    ROOT(v_is_array);
-    ROOT(v_is_arraybuffer);
-    ROOT(v_is_string);
-    ROOT(v_eq); ROOT(v_ne);
-    ROOT(v_lt); ROOT(v_le);
-    ROOT(v_gt); ROOT(v_ge);
-    ROOT(v_add);
-    ROOT(v_sub);
-    ROOT(v_mul);
-    ROOT(v_div);
-    ROOT(v_floordiv);
-    ROOT(v_modulus);
-    ROOT(v_to_character);
-    ROOT(v_to_ordinal);
-    ROOT(v_and);
-    ROOT(v_or);
-    ROOT(v_not);
-    ROOT(v_lsh);
-    ROOT(v_rsh);
-    ROOT(v_bit_or);
-    ROOT(v_bit_and);
-    ROOT(v_bit_xor);
-    ROOT(v_bit_not);
-    ROOT(v_log);
-    ROOT(v_exp);
-    ROOT(v_pow);
-    ROOT(v_sqrt);
     ROOT(uncallable_hook);
     ROOT(type_error_hook);
     ROOT(error_quit);

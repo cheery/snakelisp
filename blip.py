@@ -1,4 +1,31 @@
+import sys
 header = "\x89BLIP(alpha)\x0D\x0A\x1A\x0A"
+
+def main():
+    node = open_list(sys.argv[1])
+    save_list(sys.argv[2], node)
+
+def open_list(path):
+    with open(path, 'rb') as fd:
+        if path.endswith('.json'):
+            import json
+            return decodeJson(json.load(fd))
+        else:
+            return read_file(fd)
+
+def save_list(path, node):
+    with open(path, 'wb') as fd:
+        write_file(fd, node)
+
+def decodeJson(node):
+    if node["type"] == "list":
+        return ListNode([decodeJson(a) for a in node["list"]], node["label"] or '').strip()
+    elif node["type"] == 'text':
+        return TextNode(node["text"], node["label"] or '')
+    elif node["type"] == 'mark':
+        return MarkNode(node["label"] or '')
+    else:
+        raise Exception("unknown {}".format(node))
 
 def read_file(fd):
     assert fd.read(len(header)) == header
@@ -16,20 +43,21 @@ def read_node(fd):
 
 def read_integer(fd):
     a, b, c, d = map(ord, fd.read(4))
-    return sum(a << 0, b << 8, c << 16, d << 24)
+    value = a << 0 | b << 8 | c << 16 | d << 24
+    return value
 
 def write_file(fd, node):
     fd.write(header)
     write_node(fd, node)
 
 def write_node(fd, node):
-    info = node._BLIP_TYPE
-    uid  = node.uid.encode('utf-8')
+    uid  = node.uid.encode('utf-8') if node.uid is not None else ''
     lab  = node.label.encode('utf-8')
     assert len(uid) <= 127
     assert len(lab) <= 127
     def begin(length):
         assert length <= 0xffff
+        info = node._BLIP_TYPE
         info |= len(uid) << 2
         info |= len(lab) << 9
         info |= length << 16
@@ -44,13 +72,14 @@ def write_integer(fd, value):
     b = value >> 8 & 255
     c = value >> 16 & 255
     d = value >> 24 & 255
-    return ''.join(map(chr, (a,b,c,d)))
+    fd.write(''.join(map(chr, (a,b,c,d))))
 
 class ListNode(object):
     _BLIP_TYPE = 0
     def __init__(self, nodes, label='', uid=''):
         self.nodes = list(nodes)
         self.label = label
+        self.uid = uid
 
     def __getitem__(self, index):
         return self.nodes[index]
@@ -79,6 +108,7 @@ class TextNode(object):
     def __init__(self, text, label='', uid=''):
         self.text = text
         self.label = label
+        self.uid = uid
 
     def __repr__(self):
         return "Text:{}:{!r}".format(self.label, self.text)
@@ -98,6 +128,7 @@ class DataNode(object):
     def __init__(self, data, label='', uid=''):
         self.data = data
         self.label = label
+        self.uid = uid
 
     def __repr__(self):
         return "Data:{}:{!r}".format(self.label, self.data)
@@ -115,6 +146,7 @@ class MarkNode(object):
     _BLIP_TYPE = 3
     def __init__(self, label='', uid=''):
         self.label = label
+        self.uid = uid
 
     def __repr__(self):
         return "Mark:{}".format(self.label)
@@ -137,3 +169,6 @@ def isText(node, label=None):
 
 def isMark(node, label=None):
     return isinstance(node, MarkNode) and (label is None or node.label == label)
+
+if __name__=='__main__':
+    main()

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from blip import ListNode, TextNode, MarkNode, isList, isText, isMark
+from blip import ListNode, TextNode, MarkNode, isList, isText, isMark, open_list
 import json
 import transpiler
 from cps import Call, Lambda, Assign, Variable, Constant, Environ, null, true, false
@@ -56,6 +56,8 @@ def main():
 constants = {'null': null, 'true':true, 'false':false}
 
 def compile(expr, env, k):
+    if isList(expr, 'include') and isText(expr[0]):
+        return compile_list(open_list(expr[0].text), env, k)
     if isList(expr, 'let') and isText(expr[0]):
         var = env.get_local(expr[0].text)
         return compile(expr[1], env, 
@@ -169,20 +171,20 @@ def enclose(exprs, env):
     cont = Variable()
     return Lambda([cont], compile_list(exprs, env, cont))
 
-def open_list(path):
-    with open(path, 'r') as fd:
-        plop = json.load(fd)
-    return decodeJson(plop)
-
-def decodeJson(node):
-    if node["type"] == "list":
-        return ListNode([decodeJson(a) for a in node["list"]], node["label"] or '').strip()
-    elif node["type"] == 'text':
-        return TextNode(node["text"], node["label"] or '')
-    elif node["type"] == 'mark':
-        return MarkNode(node["label"] or '')
-    else:
-        raise Exception("unknown {}".format(node))
+#def open_list(path):
+#    with open(path, 'r') as fd:
+#        plop = json.load(fd)
+#    return decodeJson(plop)
+#
+#def decodeJson(node):
+#    if node["type"] == "list":
+#        return ListNode([decodeJson(a) for a in node["list"]], node["label"] or '').strip()
+#    elif node["type"] == 'text':
+#        return TextNode(node["text"], node["label"] or '')
+#    elif node["type"] == 'mark':
+#        return MarkNode(node["label"] or '')
+#    else:
+#        raise Exception("unknown {}".format(node))
 
 if __name__ == '__main__':
     main()

@@ -359,7 +359,6 @@ static inline string_t* unboxString(value_t value)
 
 //static inline void snakeCall(size_t argc, value_t *args) c_noreturn;
 
-
 /*
  * invariant: errors go into debugger, so assert.h will fuck off very soon.
  */

@@ -21,7 +21,7 @@ def main():
 
     env = env.new_environ()
     ret = env.new_argument('cont', False)
-    exprs = open_list(path)
+    exprs = open_list(path).strip_rec()
     #exprs = list(open_list("base.sl")) + list(open_list(path))
     program = env.close(compile_list(exprs, env, ret))
     program = program.coalesce()
@@ -57,7 +57,7 @@ constants = {'null': null, 'true':true, 'false':false}
 
 def compile(expr, env, k):
     if isList(expr, 'include') and isText(expr[0]):
-        return compile_list(open_list(expr[0].text), env, k)
+        return compile_list(open_list(expr[0].text).strip_rec(), env, k)
     if isList(expr, 'let') and isText(expr[0]):
         var = env.get_local(expr[0].text)
         return compile(expr[1], env, 
@@ -135,10 +135,12 @@ def compile_cond(expr, env, k):
     if len(seq) == 0:
         return retrieve(k, null)
     def next_cond(k):
+        if len(seq) == 0:
+            return retrieve(k, null)
         head = seq.pop(0)
         if len(seq) == 0 and isList(head, 'else'):
             return compile_list(head[0:], env, k)
-        if len(seq) == 0:
+        if isList(head, 'else'):
             raise Exception("invalid cond expression")
         return compile(head[0], env,
             (lambda truth: pick(env, k, truth,

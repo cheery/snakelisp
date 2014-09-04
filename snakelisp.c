@@ -700,6 +700,7 @@ void snakeBoot(value_t entry)
     newRoot("exp", spawnClosure(op_exp));
     newRoot("pow", spawnClosure(op_pow));
     newRoot("sqrt", spawnClosure(op_sqrt));
+    newRoot("exit", spawnClosure(quit));
 
     p_get_interface = newRoot("interface", spawnClosure(get_interface));
     p_set_interface = newRoot("interface=", spawnClosure(set_interface));

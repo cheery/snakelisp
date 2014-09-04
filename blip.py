@@ -19,7 +19,7 @@ def save_list(path, node):
 
 def decodeJson(node):
     if node["type"] == "list":
-        return ListNode([decodeJson(a) for a in node["list"]], node["label"] or '').strip()
+        return ListNode([decodeJson(a) for a in node["list"]], node["label"] or '')
     elif node["type"] == 'text':
         return TextNode(node["text"], node["label"] or '')
     elif node["type"] == 'mark':
@@ -90,6 +90,9 @@ class ListNode(object):
     def strip(self):
         return ListNode([a for a in self if not isMark(a, 'cr')], self.label)
 
+    def strip_rec(self):
+        return ListNode([a.strip_rec() for a in self if not isMark(a, 'cr')], self.label)
+
     def __repr__(self):
         return "List:{}/{}".format(self.label, len(self))
 
@@ -113,6 +116,9 @@ class TextNode(object):
     def __repr__(self):
         return "Text:{}:{!r}".format(self.label, self.text)
 
+    def strip_rec(self):
+        return self
+
     @classmethod
     def _decode_node(cls, fd, uid, label, length):
         text = fd.read(length).decode('utf-8')
@@ -133,6 +139,9 @@ class DataNode(object):
     def __repr__(self):
         return "Data:{}:{!r}".format(self.label, self.data)
 
+    def strip_rec(self):
+        return self
+
     @classmethod
     def _decode_node(cls, fd, uid, label, length):
         data = fd.read(length)
@@ -150,6 +159,9 @@ class MarkNode(object):
 
     def __repr__(self):
         return "Mark:{}".format(self.label)
+
+    def strip_rec(self):
+        return self
 
     @classmethod
     def _decode_node(cls, fd, uid, label, length):

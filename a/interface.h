@@ -1,10 +1,10 @@
 #define call(callee, args...) ({ \
-        value_t _args = {args}; \
+        value_t _args[] = {args}; \
         _call(callee, VECTORSIZE(_args), _args); \
         })
 
 #define vcall(callee, array, args...) ({ \
-        value_t _args = {args}; \
+        value_t _args[] = {args}; \
         _vcall(callee, array, VECTORSIZE(_args), _args); \
         })
 

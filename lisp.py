@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from blip import ListNode, TextNode, MarkNode, isList, isText, isMark, open_list
+from pythonboot.blip import ListNode, TextNode, MarkNode, isList, isText, isMark, open_list
 import json
 import transpiler
 from cps import Call, Lambda, Assign, Variable, Constant, Environ, null, true, false

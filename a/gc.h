@@ -16,6 +16,8 @@ static inline value_t* plant(value_t value)
     return &root[roots++];
 }
 
+#define MAIN_ENTRY(entry) void main(int argc, char* argv[]) { snakeBoot(entry, argc, argv); }
+
 noreturn snakeBoot(procedure_t *entry, int argc, char* argv[]);
 noreturn snakeGC(closure_t *closure, size_t argc, value_t *argv);
 
@@ -38,9 +40,9 @@ static inline void* _newObject(object_t *object, size_t type)
 
 #define newObject(type, sz) (_newObject(alloca(sz), type))
 
-#define newSlot(value) ({ \
+#define newSlot(value_) ({ \
         slot_t *slot = newObject(T_SLOT, sizeof(slot_t)); \
-        slot->value = value; \
+        slot->value = value_; \
         slot;})
 
 #define newArray(length) ({ \

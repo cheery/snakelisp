@@ -1,0 +1,172 @@
+#!/usr/bin/env python
+from pythonboot.blip import open_list, isList, isText, isMark, ListNode
+from pythonboot.environ import Environ
+from pythonboot.cps import Call, Lambda, Let, Variable, Constant, null, true, false
+from pythonboot import c
+import subprocess
+import sys
+import json
+
+constants = {'null': null, 'true':true, 'false':false}
+
+def main():
+    env = Environ()
+    path = sys.argv[1]
+    exprs = open_list(path).strip_rec()
+    program = env.close(compile_list(exprs, env, env.cont))
+    globs = list(env.seal())
+    with open("a/environ.json", 'r') as fd:
+        environ = json.load(fd)
+
+    source = c.transpile(program, globs, environ, path)
+    with open("a.c", 'w') as fd:
+        fd.write(source)
+    snakesources = ["a/gc.c"]
+    status = subprocess.call(["gcc", "a.c"] + snakesources + ["-Ia", "-lm"])
+    sys.exit(status)
+
+#    snakesource = "snakelisp.c"
+#
+#    rootdecl = re.compile(r'newRoot\("(.+)",')
+#    with open(snakesource) as fd:
+#        src = fd.read()
+#        c_roots = dict((decl, "(root+{})".format(i)) for i, decl in enumerate(rootdecl.findall(src)))
+#
+#    c_api = {
+#        "uncallable-hook": "&uncallable_hook",
+#        "type-error-hook": "&type_error_hook",
+#    }
+#    c_use = set()
+#    for var in env.seal():
+#        if var.name in c_roots:
+#            var.c_handle = c_roots[var.name]
+#            continue
+#        var.c_handle = c_api[var.name]
+#        c_use.add(var.c_handle)
+#    cdefns = ["extern value_t {};".format(value[1:]) for value in c_use]
+#
+#    #import visuals
+#    #visuals.create_graph("demo.png", program)
+#
+#    source = transpiler.transpile(program, cdefns, path)
+#    open(path+'.c', 'w').write(source)
+#    subprocess.call(["gcc", path+'.c', snakesource, "-I.", "-lm"])
+
+def compile_list(exprs, env, k):
+    assert k != ret
+    q = list(exprs)
+    def next_parameter(_):
+        if len(q) > 1:
+            return compile(q.pop(0), env, next_parameter)
+        else:
+            return compile(q.pop(0), env, k)
+    if len(exprs) == 0:
+        return ret(k, null)
+    return next_parameter(null)
+
+def compile(expr, env, k):
+    assert k != ret
+    if isList(expr, 'include') and isText(expr[0]):
+        return compile_list(open_list(expr[0].text).strip_rec(), env, k)
+    if isList(expr, 'let') and isText(expr[0]):
+        var = env.newlocal(expr[0].text, expr[0].uid)
+        return compile(expr[1], env, 
+            (lambda val: Let(var, val, ret(k, val), False)))
+    if isList(expr, 'set') and isText(expr[0]):
+        var = env.lookup(expr[0].text, expr[0].uid)
+        return compile(expr[1], env, 
+            (lambda val: Let(var, val, ret(k, val), False)))
+    if isList(expr, 'cond'):
+        return compile_cond(expr, env, k)
+    if isList(expr, 'while'):
+        return compile_while(expr, env, k)
+    if isList(expr, 'func'):
+        env = Environ(env, expr.uid)
+        for sym in expr[0]:
+            assert sym.label == ''
+            env.newarg(sym.text, sym.uid)
+        return ret(k, env.close(compile_list(expr[1:], env, env.cont)))
+    if isList(expr, 'infix') and len(expr) == 3:
+        return compile(ListNode([expr[1], expr[0]] + expr[2:]), env, k)
+    if isList(expr, ''):
+        params = []
+        seq = list(expr)
+        def next_parameter(param):
+            params.append(param)
+            if len(seq) > 0:
+                return compile(seq.pop(0), env, next_parameter)
+            else:
+                callee = params.pop(0)
+                return Call([callee, lift(k, expr.uid)] + params)
+        return compile(seq.pop(0), env, next_parameter)
+    if isText(expr, "string"):
+        return ret(k, Constant(expr.text))
+    if isText(expr, ''):
+        if expr.text[:1].isdigit():
+            return ret(k, Constant(int(expr.text)))
+        if expr.text in constants:
+            param = constants[expr.text]
+        else:
+            param = env.lookup(expr.text, expr.uid)
+        return ret(k, param)
+    raise Exception("what is {}?".format(expr))
+
+def ret(k, param):
+    if callable(k):
+        return k(param)
+    else:
+        return Call([k, param])
+
+def lift(k, uid):
+    if callable(k):
+        x = Variable()
+        return Lambda([x], k(x), uid)
+    else:
+        return k
+
+def compile_cond(expr, env, k):
+    seq = list(expr[0:])
+    if len(seq) == 0:
+        return ret(k, null)
+    def next_cond(k):
+        if len(seq) == 0:
+            return ret(k, null)
+        head = seq.pop(0)
+        if len(seq) == 0 and isList(head, 'else'):
+            return compile_list(head[0:], env, k)
+        if isList(head, 'else'):
+            raise Exception("invalid cond expression")
+        return compile(head[0], env,
+            (lambda truth: pick(env, k, truth,
+                enclose(head[1:], env),
+                lambdaCont(next_cond))))
+    return next_cond(k)
+
+def enclose(exprs, env):
+    cont = Variable()
+    return Lambda([cont], compile_list(exprs, env, cont))
+
+def compile_while(expr, env, k):
+    self = Variable()
+    seq  = expr[1:]
+    def compile_body(k):
+        return compile_list(expr[1:], env, (lambda _: Call([self, lift(k, expr.uid)])))
+    cont = Variable()
+    looplambda = Lambda([cont], compile(expr[0], env,
+        (lambda truth: pick(env, cont, truth, lambdaCont(compile_body), lambdaNull()))))
+    return Let(self, looplambda, Call([self, lift(k, expr.uid)]))
+
+def pick(env, k, truth, yes, no):
+    return Call([env.newimplicit('pick'), lift(k, ''), truth, yes, no])
+
+def lambdaNull():
+    cont = Variable()
+    return Lambda([cont], Call([cont, null]))
+
+def lambdaCont(func):
+    cont = Variable()
+    return Lambda([cont], func(cont))
+
+
+if __name__=='__main__':
+    main()

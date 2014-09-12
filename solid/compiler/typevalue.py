@@ -11,7 +11,7 @@ def typevalue(toplevel, expr):
         name = expr.assym.rstrip("*")
         if name in toplevel.typespace:
             tp = toplevel.typespace[name]
-            for i in range(len(expr.assym), len(name)):
+            for i in range(len(name), len(expr.assym)):
                 tp = Type.pointer(tp)
             return tp
     raise Exception("type missing for {}".format(expr))

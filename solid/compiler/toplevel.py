@@ -46,3 +46,43 @@ def read_arglist(args):
             raise Exception("invalid argument name {}".format(tp))
         out.append(a.assym) 
     return out
+
+class FFIFunc(object):
+    def __init__(self, proc):
+        self.proc = proc
+
+    def call(self, context, expr):
+        args = [context.expr(a) for a in expr[1:]]
+        return context.bb.call(self.proc, args)
+
+@macros.append
+def ffi_function(toplevel, expr):
+    if not expr.islist:
+        return
+    if len(expr) != 3:
+        return
+    if expr[0].assym != 'c-function':
+        return
+    head, name, spec = expr
+    if not name.issym:
+        return
+    tp = function_signature(toplevel, spec)
+    if not isinstance(tp, FunctionType):
+        raise Exception("invalid function signature {}".format(tp))
+    toplevel.globspace[name.assym] = FFIFunc(toplevel.module.add_function(tp, name.assym))
+    return (lambda: None)
+
+
+#        if issym(head, "struct"):
+#            name = sym(expr[1])
+#            environ[name] = tp = Type.opaque(name)
+#            pipeline.append(partial(build_struct, tp, environ, expr[2:]))
+#def build_struct(tp, environ, fields):
+#    g = iter(fields)
+#    types = []
+#    names = []
+#    for spec, name in zip(g, g):
+#        types.append(typeval(environ, spec))
+#        names.append(sym(name))
+#    tp.set_body(types)
+#    tp.names = names

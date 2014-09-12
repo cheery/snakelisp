@@ -123,7 +123,7 @@ def tokenize(source, index=0):
                 recov = state
                 state = ESCAPE
             if ch == "'":
-                yield Annotation(start, index+1, 'string', string.decode('unicode-escape'))
+                yield Annotation(start, index+1, 'string', string[1:-1].decode('unicode-escape'))
                 state = IDLE
         elif state == DOUBLEQUOTE:
             string += ch
@@ -131,7 +131,7 @@ def tokenize(source, index=0):
                 recov = state
                 state = ESCAPE
             if ch == '"':
-                yield Annotation(start, index+1, 'string', string.decode('unicode-escape'))
+                yield Annotation(start, index+1, 'string', string[1:-1].decode('unicode-escape'))
                 state = IDLE
         elif state == ESCAPE:
             string += ch

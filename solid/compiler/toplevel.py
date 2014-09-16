@@ -8,6 +8,16 @@ class Toplevel(object):
         self.globspace = globspace
         self.macros = macros
         self.module = module
+        self.globalvars = {}
+
+    def constant(self, value):
+        if value in self.globalvars:
+            return self.globalvars[value]
+        var = self.module.add_global_variable(value.type, "g{}".format(len(self.globalvars)))
+        var.initializer = value
+        var.global_constant = True
+        self.globalvars[value] = var
+        return var
 
     def resolve(self, expr):
         for macro in reversed(self.macros):

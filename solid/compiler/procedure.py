@@ -57,10 +57,7 @@ class Context(object):
             long_t = self.toplevel.typespace['long']
             return Constant.int(long_t, expr.value)
         if expr.isstring:
-            t = Type.pointer(Type.int(8))
             s = Constant.stringz(expr.value.encode('utf-8'))
-            bb = self.bb
-            mem = bb.alloca(s.type)
-            bb.store(s, mem)
-            return bb.gep(mem, [Constant.int(Type.int(), 0)]*2)
+            mem = self.toplevel.constant(s)
+            return self.bb.gep(mem, [Constant.int(Type.int(), 0)]*2)
         raise Exception("atom undefined {}".format(expr))
